@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleExecutable</key>
+    <string>Vaultage</string>
+    <key>CFBundleIdentifier</key>
+    <string>me.doublegsoft.eContent.vaultage</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>Vaultage</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>10.15</string>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+    <key>NSMainNibFile</key>
+    <string></string>
+    <key>CFBundleIconFile</key>
+    <string>vaultage</string>
+    <key>CFBundleIconName</key>
+    <string>vaultage</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSSupportsAutomaticTermination</key>
+    <true/>
+    <key>NSSupportsSuddenTermination</key>
+    <true/>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>This app needs to access video files.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>This app needs to access your photo library to load videos.</string>
+</dict>
+</plist>
