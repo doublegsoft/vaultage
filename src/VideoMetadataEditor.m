@@ -49,40 +49,32 @@
 }
 
 - (void)setupPlaceholders {
-  // 设置文本视图占位符
-  if (self.locationTextView.string.length == 0) {
-    self.locationTextView.string = @"";
-  }
+  
 }
 
 - (void)setupResolutionPopup {
   [self.resolutionPopup removeAllItems];
-  [self.resolutionPopup addItemWithTitle:@"Select Resolution"];
   [self.resolutionPopup addItemWithTitle:@"720"];
   [self.resolutionPopup addItemWithTitle:@"1080"];
   [self.resolutionPopup addItemWithTitle:@"1440"];
   [self.resolutionPopup addItemWithTitle:@"2160"];
+  [self.resolutionPopup selectItemAtIndex:1];
 }
 
 - (void)setupLanguagePopup {
   [self.languagePopup removeAllItems];
-  [self.languagePopup addItemWithTitle:@"Select Language"];
-  [self.languagePopup addItemWithTitle:@"English"];
-  [self.languagePopup addItemWithTitle:@"Spanish"];
-  [self.languagePopup addItemWithTitle:@"French"];
-  [self.languagePopup addItemWithTitle:@"German"];
-  [self.languagePopup addItemWithTitle:@"Chinese"];
-  [self.languagePopup addItemWithTitle:@"Japanese"];
+  [self.languagePopup addItemWithTitle:@"EN"];
+  [self.languagePopup addItemWithTitle:@"ZH"];
 }
 
 #pragma mark - Video Loading
 
 - (IBAction)reselectVideo:(id)sender {
-  NSOpenPanel *openPanel = [NSOpenPanel openPanel];
+  NSOpenPanel* openPanel = [NSOpenPanel openPanel];
   openPanel.canChooseFiles      = YES;
   openPanel.canChooseDirectories = NO;
   openPanel.allowsMultipleSelection = NO;
-  openPanel.allowedFileTypes    = @[@"mp4", @"mov", @"m4v", @"avi", @"mkv"];
+  openPanel.allowedFileTypes    = @[@"mp4", @"mov", @"m4v", @"avi", @"mkv", @"webm"];
   
   [openPanel beginWithCompletionHandler:^(NSInteger result) {
     if (result == NSModalResponseOK) {
@@ -141,8 +133,8 @@
 #pragma mark - Language Selection
 
 - (IBAction)toggleLanguage:(id)sender {
-  NSButton *button = (NSButton *)sender;
-  NSString *language = button.title;
+  NSButton* button = (NSButton *)sender;
+  NSString* language = button.title;
   
   if (button.state == NSControlStateValueOn) {
     [self.selectedLanguages addObject:language];
@@ -154,7 +146,7 @@
 #pragma mark - Form Actions
 
 - (IBAction)cancelEditing:(id)sender {
-  NSAlert *alert = [[NSAlert alloc] init];
+  NSAlert* alert = [[NSAlert alloc] init];
   alert.messageText = @"Cancel Editing";
   alert.informativeText = @"Are you sure you want to cancel? All unsaved changes will be lost.";
   [alert addButtonWithTitle:@"Yes"];
@@ -194,6 +186,73 @@
   [self showAlert:@"Success" message:@"Metadata saved successfully!"];
 }
 
+- (IBAction)saveToDatabase:(id)sender {
+  sqlite3* database;
+  if (sqlite3_open("/Volumes/EXPORT/var/db/sqlite3/resources.db", &database) != SQLITE_OK) {
+    [self showAlert:@"错误" message:[NSString stringWithFormat:@"Failed to open database: %s", sqlite3_errmsg(database)]];
+    return;
+  }
+  
+  // 检查记录是否已存在
+  // NSString* checkSQL = @"SELECT id FROM videos WHERE id = ?";
+  // sqlite3_stmt* checkStatement;
+  // BOOL recordExists = NO;
+  
+  // if (sqlite3_prepare_v2(database, [checkSQL UTF8String], -1, &checkStatement, NULL) == SQLITE_OK) {
+  //   sqlite3_bind_text(checkStatement, 1, [self.idField.stringValue UTF8String], -1, SQLITE_TRANSIENT);
+  //   if (sqlite3_step(checkStatement) == SQLITE_ROW) {
+  //     recordExists = YES;
+  //   }
+  // }
+  // sqlite3_finalize(checkStatement);
+  
+  // // 如果记录存在，使用 UPDATE；否则使用 INSERT
+  // if (recordExists) {
+  //   // TODO: 提示已经存在
+  //   return NO;
+  // }
+  
+  // 准备 INSERT 语句
+  const char* insertSQL = 
+      "INSERT INTO youtube (id, url, title, author, duration, resolution, language, year, path, note) "
+      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+  
+  sqlite3_stmt* statement;
+  if (sqlite3_prepare_v2(database, insertSQL, -1, &statement, NULL) != SQLITE_OK) {
+    [self showAlert:@"错误" message:[NSString stringWithFormat:@"Failed to prepare statement: %s", sqlite3_errmsg(database)]];
+    return;
+  }
+  
+  // 绑定参数
+  sqlite3_bind_text(statement, 1,  [self.idField.stringValue UTF8String], -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(statement, 2,  [self.linkField.stringValue UTF8String], -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(statement, 3,  [self.titleField.stringValue UTF8String], -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(statement, 4,  [self.authorField.stringValue UTF8String], -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(statement, 5,  [self.durationField.stringValue UTF8String], -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(statement, 6,  [self.resolutionPopup.titleOfSelectedItem UTF8String], -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(statement, 7, [self.languagePopup.titleOfSelectedItem UTF8String], -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(statement, 8,  [self.yearField.stringValue UTF8String], -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(statement, 9,  [self.filePathField.stringValue UTF8String], -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(statement, 10,  [self.noteTextView.string UTF8String], -1, SQLITE_TRANSIENT);
+  
+  // 将选中的语言转换为 JSON 字符串
+  NSError* error;
+  
+  // 执行语句
+  BOOL success = NO;
+  if (sqlite3_step(statement) == SQLITE_DONE) {
+    success = YES;
+    NSLog(@"Video metadata saved successfully with ID: %@", self.idField.stringValue);
+  } else {
+    [self showAlert:@"错误" message:[NSString stringWithFormat:@"Failed to insert data: %s", sqlite3_errmsg(database)]];
+    return;
+  }
+  
+  sqlite3_finalize(statement);
+  sqlite3_close(database);
+  [self clearForm];
+}
+
 - (IBAction)deleteVideo:(id)sender {
   NSAlert *alert = [[NSAlert alloc] init];
   alert.messageText     = @"Delete Video";
@@ -227,23 +286,18 @@
 
 - (void)clearForm {
   self.videoID = [self generateVideoID];
-  self.idField.stringValue       = self.videoID;
+  self.idField.stringValue       = @"";
+  self.linkField.stringValue       = @"";
   self.filePathField.stringValue = @"";
   self.titleField.stringValue    = @"";
   self.authorField.stringValue   = @"";
   self.durationField.stringValue = @"";
   self.titleNotesField.stringValue = @"";
   self.yearField.stringValue     = @"";
-  self.locationTextView.string   = @"";
+  self.noteTextView.string   = @"";
   
-  [self.resolutionPopup selectItemAtIndex:0];
+  [self.resolutionPopup selectItemAtIndex:1];
   [self.languagePopup selectItemAtIndex:0];
-  
-  self.englishButton.state = NSControlStateValueOff;
-  self.spanishButton.state = NSControlStateValueOff;
-  self.frenchButton.state  = NSControlStateValueOff;
-  
-  [self.selectedLanguages removeAllObjects];
   
   self.player = nil;
   self.playerView.player = nil;
@@ -290,84 +344,56 @@
   [alert runModal];
 }
 
-- (BOOL)saveToDatabase {
-  sqlite3* database;
-  if (sqlite3_open(@"", &database) != SQLITE_OK) {
-      NSLog(@"Failed to open database: %s", sqlite3_errmsg(database));
-      return NO;
-  }
-  if (!database) {
-    NSLog(@"Database not initialized");
-    return NO;
+- (NSString *)extractYouTubeVideoID:(NSString *)urlString {
+  if (!urlString || urlString.length == 0) {
+    return nil;
   }
   
-  // 检查记录是否已存在
-  NSString* checkSQL = @"SELECT id FROM videos WHERE id = ?";
-  sqlite3_stmt* checkStatement;
-  BOOL recordExists = NO;
+  // 去除首尾空白
+  urlString = [urlString stringByTrimmingCharactersInSet:
+    [NSCharacterSet whitespaceAndNewlineCharacterSet]];
   
-  if (sqlite3_prepare_v2(database, [checkSQL UTF8String], -1, &checkStatement, NULL) == SQLITE_OK) {
-    sqlite3_bind_text(checkStatement, 1, [self.idField.stringValue UTF8String], -1, SQLITE_TRANSIENT);
-    if (sqlite3_step(checkStatement) == SQLITE_ROW) {
-      recordExists = YES;
+  // 正则表达式匹配 YouTube URL
+  // 支持格式：
+  // - https://www.youtube.com/watch?v=VIDEO_ID
+  // - https://youtu.be/VIDEO_ID
+  // - https://www.youtube.com/embed/VIDEO_ID
+  NSString *pattern = @"(?:youtube\\.com/watch\\?v=|youtu\\.be/|youtube\\.com/embed/)([a-zA-Z0-9_-]{11})";
+  
+  NSError *error;
+  NSRegularExpression *regex = [NSRegularExpression 
+    regularExpressionWithPattern:pattern
+    options:NSRegularExpressionCaseInsensitive 
+    error:&error];
+  
+  if (error) {
+    NSLog(@"正则表达式错误: %@", error);
+    return nil;
+  }
+  
+  NSTextCheckingResult *match = [regex 
+    firstMatchInString:urlString 
+    options:0 
+    range:NSMakeRange(0, urlString.length)];
+  
+  if (match && match.numberOfRanges > 1) {
+    NSRange videoIDRange = [match rangeAtIndex:1];
+    return [urlString substringWithRange:videoIDRange];
+  }
+  
+  // 如果没有匹配到，检查是否直接输入了 11 位 ID
+  if (urlString.length == 11) {
+    NSCharacterSet *validChars = [NSCharacterSet 
+      characterSetWithCharactersInString:@"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"];
+    NSCharacterSet *inputChars = [NSCharacterSet 
+      characterSetWithCharactersInString:urlString];
+    
+    if ([validChars isSupersetOfSet:inputChars]) {
+      return urlString;
     }
   }
-  sqlite3_finalize(checkStatement);
   
-  // 如果记录存在，使用 UPDATE；否则使用 INSERT
-  if (recordExists) {
-    // TODO: 提示已经存在
-    return NO;
-  }
-  
-  // 准备 INSERT 语句
-  const char* insertSQL = 
-      "INSERT INTO videos (id, url, youtube_id, path, title, author, duration, "
-      "langauge, resolution, language, selected_languages, year, location, note) "
-      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
-  
-  sqlite3_stmt* statement;
-  if (sqlite3_prepare_v2(database, insertSQL, -1, &statement, NULL) != SQLITE_OK) {
-    NSLog(@"Failed to prepare insert statement: %s", sqlite3_errmsg(database));
-    return NO;
-  }
-  
-  // 绑定参数
-  // sqlite3_bind_text(statement, 1,  [self.idField.stringValue UTF8String], -1, SQLITE_TRANSIENT);
-  // sqlite3_bind_text(statement, 2,  [self.linkField.stringValue UTF8String], -1, SQLITE_TRANSIENT);
-  // sqlite3_bind_text(statement, 3,  [self.youtubeIDField.stringValue UTF8String], -1, SQLITE_TRANSIENT);
-  // sqlite3_bind_text(statement, 4,  [self.filePathField.stringValue UTF8String], -1, SQLITE_TRANSIENT);
-  // sqlite3_bind_text(statement, 5,  [self.titleField.stringValue UTF8String], -1, SQLITE_TRANSIENT);
-  // sqlite3_bind_text(statement, 6,  [self.authorField.stringValue UTF8String], -1, SQLITE_TRANSIENT);
-  // sqlite3_bind_text(statement, 7,  [self.durationField.stringValue UTF8String], -1, SQLITE_TRANSIENT);
-  // sqlite3_bind_text(statement, 8,  [self.noteTextView.stringValue UTF8String], -1, SQLITE_TRANSIENT);
-  // sqlite3_bind_text(statement, 9,  [self.resolutionPopup.titleOfSelectedItem UTF8String], -1, SQLITE_TRANSIENT);
-  // sqlite3_bind_text(statement, 10, [self.languagePopup.titleOfSelectedItem UTF8String], -1, SQLITE_TRANSIENT);
-  
-  // 将选中的语言转换为 JSON 字符串
-  NSError* error;
-  NSData* languagesData = [NSJSONSerialization dataWithJSONObject:[self.selectedLanguages allObjects]
-                                                          options:0
-                                                            error:&error];
-  NSString* languagesJSON = [[NSString alloc] initWithData:languagesData encoding:NSUTF8StringEncoding];
-  sqlite3_bind_text(statement, 11, [languagesJSON UTF8String], -1, SQLITE_TRANSIENT);
-  
-  sqlite3_bind_text(statement, 12, [self.yearField.stringValue UTF8String], -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(statement, 13, [self.locationTextView.string UTF8String], -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(statement, 14, [self.noteTextView.string UTF8String], -1, SQLITE_TRANSIENT);
-  
-  // 执行语句
-  BOOL success = NO;
-  if (sqlite3_step(statement) == SQLITE_DONE) {
-    success = YES;
-    NSLog(@"Video metadata saved successfully with ID: %@", self.idField.stringValue);
-  } else {
-    NSLog(@"Failed to insert: %s", sqlite3_errmsg(database));
-  }
-  
-  sqlite3_finalize(statement);
-  sqlite3_close(database);
-  return success;
+  return nil;
 }
 
 @end

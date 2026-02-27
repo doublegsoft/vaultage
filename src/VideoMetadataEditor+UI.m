@@ -26,7 +26,6 @@
 
   return newRect;
 }
-
 @end
 
 @implementation VideoMetadataEditor (UI)
@@ -73,21 +72,31 @@
                                      frame:NSMakeRect(labelX, currentY, labelWidth, 24)];
   [view addSubview:linkLabel];
 
-  NSTextField* linkField = [self createTextField:NSMakeRect(fieldX, currentY, fieldWidth, 30)];
+  PasteableTextField* linkField = [self createTextField:NSMakeRect(fieldX, currentY, fieldWidth, 30)];
   linkField.placeholderString = @"https://www.youtube.com/watch?v=SW0AcDIl4jY";
   [view addSubview:linkField];
   self.linkField = linkField;
+  __weak typeof(self) weakSelf = self;
+  self.linkField.onPaste = ^(NSString* pastedText) {
+    NSLog(@"粘贴 YouTube URL: %@", pastedText);
+    self.linkField.stringValue = pastedText;
+    // 自动提取视频 ID
+    NSString* videoID = [weakSelf extractYouTubeVideoID:pastedText];
+    if (videoID) {
+      weakSelf.idField.stringValue = videoID;
+      NSLog(@"自动提取 ID: %@", videoID);
+    }
+  };
 
   currentY -= rowHeight;
 
-  NSTextField* idLabel =
-    [self createLabel:@"Youtube标识"
+  NSTextField* idLabel =[self createLabel:@"Youtube标识"
                 frame:NSMakeRect(labelX, currentY, labelWidth, 24)];
   [view addSubview:idLabel];
 
-  NSTextField* idField =
+  PasteableTextField* idField =
     [self createTextField:NSMakeRect(fieldX, currentY, fieldWidth, 30)];
-  idField.enabled = NO;
+  // idField.enabled = NO;
   idField.placeholderString = @"SW0AcDIl4jY";
   [view addSubview:idField];
   self.idField = idField;
@@ -99,7 +108,7 @@
                 frame:NSMakeRect(labelX, currentY, labelWidth, 24)];
   [view addSubview:filePathLabel];
 
-  NSTextField* filePathField =
+  PasteableTextField* filePathField =
     [self createTextField:NSMakeRect(fieldX, currentY, 330, 30)];
   [view addSubview:filePathField];
   self.filePathField = filePathField;
@@ -121,7 +130,7 @@
                 frame:NSMakeRect(labelX, currentY, labelWidth, 24)];
   [view addSubview:titleLabel];
 
-  NSTextField* titleField =
+  PasteableTextField* titleField =
     [self createTextField:NSMakeRect(fieldX, currentY, fieldWidth, 30)];
   titleField.placeholderString = @"";
   [view addSubview:titleField];
@@ -134,7 +143,7 @@
                 frame:NSMakeRect(labelX, currentY, labelWidth, 24)];
   [view addSubview:authorLabel];
 
-  NSTextField* authorField =
+  PasteableTextField* authorField =
     [self createTextField:NSMakeRect(fieldX, currentY, fieldWidth, 30)];
   authorField.placeholderString = @"";
   [view addSubview:authorField];
@@ -147,7 +156,7 @@
                 frame:NSMakeRect(labelX, currentY, labelWidth, 24)];
   [view addSubview:durationLabel];
 
-  NSTextField* durationField =
+  PasteableTextField* durationField =
     [self createTextField:NSMakeRect(fieldX, currentY, fieldWidth, 30)];
   durationField.placeholderString = @"hh:mm:ss";
   [view addSubview:durationField];
@@ -174,8 +183,7 @@
                 frame:NSMakeRect(labelX, currentY, labelWidth, 24)];
   [view addSubview:languageLabel1];
 
-  NSPopUpButton* languagePopup =
-    [[NSPopUpButton alloc] initWithFrame:
+  NSPopUpButton* languagePopup = [[NSPopUpButton alloc] initWithFrame:
       NSMakeRect(fieldX, currentY, fieldWidth, 30)];
   languagePopup.bezelStyle = NSBezelStyleRounded;
   [view addSubview:languagePopup];
@@ -188,7 +196,7 @@
                 frame:NSMakeRect(labelX, currentY, labelWidth, 24)];
   [view addSubview:yearLabel];
 
-  NSTextField* yearField =
+  PasteableTextField* yearField =
     [self createTextField:NSMakeRect(fieldX, currentY, fieldWidth, 30)];
   yearField.placeholderString = @"";
   [view addSubview:yearField];
@@ -209,8 +217,6 @@
   
   NSTextView *noteTextView = [[NSTextView alloc] initWithFrame:noteScrollView.bounds];
   noteTextView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
-//  noteTextView.backgroundColor = [NSColor colorWithWhite:0.2 alpha:1.0];
-//  noteTextView.textColor = [NSColor whiteColor];
   noteTextView.font = [NSFont systemFontOfSize:13];
   noteTextView.string = @"";
   noteScrollView.documentView = noteTextView;
@@ -227,7 +233,7 @@
   saveButton.bezelStyle = NSBezelStyleRounded;
   saveButton.keyEquivalent = @"\r";
   [saveButton setTarget:self];
-  [saveButton setAction:@selector(saveMetadata:)];
+  [saveButton setAction:@selector(saveToDatabase:)];
   [view addSubview:saveButton];
   self.saveButton = saveButton;
 
@@ -263,8 +269,8 @@
   return label;
 }
 
-- (NSTextField *)createTextField:(NSRect)frame {
-  NSTextField *textField = [[NSTextField alloc] initWithFrame:frame];
+- (PasteableTextField *)createTextField:(NSRect)frame {
+  PasteableTextField *textField = [[PasteableTextField alloc] initWithFrame:frame];
   textField.bezelStyle = NSTextFieldRoundedBezel;
   textField.backgroundColor = [NSColor colorWithWhite:0.2 alpha:1.0];
 //  textField.textColor = [NSColor whiteColor];
