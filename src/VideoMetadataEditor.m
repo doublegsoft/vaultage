@@ -188,7 +188,7 @@
 
 - (IBAction)saveToDatabase:(id)sender {
   sqlite3* database;
-  if (sqlite3_open("/Volumes/EXPORT/var/db/sqlite3/resources.db", &database) != SQLITE_OK) {
+  if (sqlite3_open("/Users/christian/export/local/works/doublegsoft.me/eContent/03.Development/vaultage/db/resources.db", &database) != SQLITE_OK) {
     [self showAlert:@"错误" message:[NSString stringWithFormat:@"Failed to open database: %s", sqlite3_errmsg(database)]];
     return;
   }

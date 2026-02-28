@@ -19,6 +19,7 @@ RESOURCES_DIR = $(CONTENTS_DIR)/Resources
 SOURCES = src/main.m \
           src/PasteableTextField.m \
           src/AppDelegate.m \
+					src/MenuManager.m \
           src/VideoMetadataEditor.m \
           src/VideoMetadataEditor+UI.m \
           src/sqlite3.c

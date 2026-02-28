@@ -7,6 +7,7 @@
 
 #import "AppDelegate.h"
 #import "VideoMetadataEditor.h"
+#import "MenuManager.h"
 
 @interface AppDelegate ()
 
@@ -33,6 +34,11 @@
     // 加载视图控制器
     VideoMetadataEditor *editorVC = [[VideoMetadataEditor alloc] initWithNibName:nil bundle:nil];
     self.window.contentViewController = editorVC;
+
+    MenuManager *menuManager = [MenuManager sharedManager];
+    menuManager.viewController = editorVC;
+    NSMenu* mainMenu = [menuManager createMainMenu];
+    [NSApp setMainMenu:mainMenu];
     
     // 显示窗口
     [self.window makeKeyAndOrderFront:nil];
